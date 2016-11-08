@@ -1,1 +1,1 @@
-mpicc life.c -lm
+mpicc matrixmultiply.c -lm

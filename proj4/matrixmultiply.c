@@ -34,7 +34,7 @@
 
 
 // Reads a matrix from a file and sends the blocks to coreesponding processes
-void readRowStripedMatrix(
+void readRowStripedMatrices(
     char*  filename, // Name of file with matrices
     int*** aMatrix,  // Bulk storage of A matrix
     int**  aStorage, // 2D A matrix
@@ -50,12 +50,12 @@ void exchangeRows(char** matrix, int rank, int numProcs, int rows, int cols);
 
 
 // Prints out a matrix that is rows x cols
-void printSubmatrix(char **subMatrix, int rows, int cols);
+void printSubmatrix(long long **subMatrix, int numRows, int numCols);
 
 
 // Gets all row information from processes and prints the matrix
-void printRowStripedMatrix(char** subMatrix, int numRows, 
-                            int myRows, int myCols, int myRank, int numProcs);
+void printRowStripedMatrix(long long** matrix, int size, int rank, int numProcs); 
+
 
 int main(int argc, char* argv[]) {
 
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
 
 
     // Read the matrix in from file and get my portion of it
-    readRowStripedMatrix(filename, &aMatrix, &aStorage, &bMatrix, &bStorage,
+    readRowStripedMatrices(filename, &aMatrix, &aStorage, &bMatrix, &bStorage,
                             &matrixSize, myRank, numProcs);
 
 
@@ -153,7 +153,6 @@ int main(int argc, char* argv[]) {
     if (myRank == 0) {
         printf("\n\n");
     }
-    printRowStripedMatrix(matrix, d.numRows, myRows, myCols, myRank, numProcs);
     
     
     // Free dynami memory
@@ -180,7 +179,7 @@ int main(int argc, char* argv[]) {
 
 
 void readRowStripedMatrices(char* filename, int*** aMatrix, int** aStorage,
-                            int*** bMatrix, int** bMatrix,  int* MatrixSize,
+                            int*** bMatrix, int** bStorage,  int* matSize,
                             int myRank, int numProcs) {
 
     int** myAMatrix;  // Dereferenced version of subMatrix
@@ -215,11 +214,11 @@ void readRowStripedMatrices(char* filename, int*** aMatrix, int** aStorage,
     }
 
     // Send dimensions to every process
-    MPI_Bcast(size, sizeof(int), MPI_INT, numProcs-1, MPI_COMM_WORLD);
+    MPI_Bcast(&size, 1, MPI_INT, numProcs-1, MPI_COMM_WORLD);
     if (size == 0 || size % numProcs != 0) {
         MPI_Abort(MPI_COMM_WORLD, INVALID_MATRIX);
     }
-    *matrixSize = size;
+    *matSize = size;
 
     // Allocate storage 
     myRows = size/numProcs;
@@ -256,7 +255,7 @@ void readRowStripedMatrices(char* filename, int*** aMatrix, int** aStorage,
     // p-1 broadcast matrix data
     if (myRank == (numProcs - 1)) {
 
-        for (i = 0; i < 2*numProcs; ++i) {
+        for (i = 0; i < numProcs; ++i) {
             
             // Read in rows
             intsRead = 0;
@@ -268,12 +267,12 @@ void readRowStripedMatrices(char* filename, int*** aMatrix, int** aStorage,
 //                }
                 
                 // Read A row
-                for (int c = 0; c < myCols; ++c) {
+                for (c = 0; c < myCols; ++c) {
                     intsRead += fscanf(matrixFile, "%d", myAMatrix[r]+c);
                 }
 
                 // Read B row
-                for (int c = 0; c < myCols; ++c) {
+                for (c = 0; c < myCols; ++c) {
                     intsRead += fscanf(matrixFile, "%d", myBMatrix[r]+c);
                 }
             }
@@ -352,7 +351,7 @@ void printRowStripedMatrix(long long** matrix, int size, int rank, int numProcs)
     int numCols     = size;
 
 
-    if (myRank == 0) {
+    if (rank == 0) {
         // Print my submatrix
         printSubmatrix(matrix, rowsPerProc, numCols);
 
@@ -361,7 +360,7 @@ void printRowStripedMatrix(long long** matrix, int size, int rank, int numProcs)
 
             // Allocate and storage and hookup 2D matrix
             bulkStorage    = (long long*) malloc(rowsPerProc * numCols 
-                                                    * sizeof long long);
+                                                    * sizeof(long long));
 
             receivedMatrix = (long long**) malloc(rowsPerProc * sizeof(long long*));
 
@@ -371,7 +370,7 @@ void printRowStripedMatrix(long long** matrix, int size, int rank, int numProcs)
 
             receivedMatrix[0] = bulkStorage;
             for (i = 1; i < maxRows; ++i) {
-                receivedMatrix[i] = receivedMatrix[i-1] + myCols;
+                receivedMatrix[i] = receivedMatrix[i-1] + numCols;
             }
 
             
@@ -382,11 +381,11 @@ void printRowStripedMatrix(long long** matrix, int size, int rank, int numProcs)
                 MPI_Send(&prompt, 1, MPI_INT, i, PROMPT_MSG, MPI_COMM_WORLD);
 
                 // Get matrix from proc i
-                MPI_Recv(bulkStorage, size*myCols, MPI_LONG_LONG, i, 
+                MPI_Recv(bulkStorage, size*numCols, MPI_LONG_LONG, i, 
                             RESPONSE_MSG, MPI_COMM_WORLD, &status);
 
                 // Print matrix from proc i
-                printSubmatrix(receivedMatrix, size, myCols);
+                printSubmatrix(receivedMatrix, size, numCols);
             }
     
             free(receivedMatrix);
@@ -408,7 +407,7 @@ void printSubmatrix(long long **subMatrix, int numRows, int numCols) {
 
     for (r = 0; r < numRows; ++r) {
         for (c = 0; c < numCols; ++c) {
-            printf("%d ", subMatrix[r][c]);
+            printf("%lld ", subMatrix[r][c]);
        }
        printf("\n");
     }
