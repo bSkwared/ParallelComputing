@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
     int*  cStorage;
     int** cMatrix;
 
-    Dimensions d;         // Dimensions of global matrix
+    int matSize;
     int myRows;           // Dimensions of my matrix
     int myCols;
 
@@ -97,22 +97,9 @@ int main(int argc, char* argv[]) {
 
 
     // Check command line arguments
-    if (argc != 4) {
-        printf("\nUsage: %s filename iterations printFrequency\n", argv[0]);
+    if (argc != 2) {
+        printf("\nUsage: %s filename\n", argv[0]);
         return 1;
-    }
-
-    // Parse command line arguments
-    numIterations = atoi(argv[2]);
-    if (numIterations <= 0) {
-        printf("\nError: number of iterations must be a positive integer");
-        return 3;
-    }
-
-    printMod = atoi(argv[3]);
-    if (printMod < 0) {
-        printf("\nError: print frequency cannot be negative\n\n");
-        return 4;
     }
 
     strncpy(filename, argv[1], sizeof(filename)); 
@@ -253,7 +240,7 @@ void readRowStripedMatrix(
 
 
 void readRowStripedMatrices(char* filename, int*** aMatrix, int** aStorage,
-                            int*** bMatrix, int** bMatrix, int* matSize,
+                            int*** bMatrix, int** bMatrix,  int* MatrixSize,
                             int myRank, int numProcs) {
 
     int** myAMatrix;  // Dereferenced version of subMatrix
@@ -262,51 +249,44 @@ void readRowStripedMatrices(char* filename, int*** aMatrix, int** aStorage,
     int** myBMatrix;
     int*  myBStorage;
 
-    int matSize;
+    int size;
 
     FILE* matrixFile; // File pointer for matrix file
     int bytesRead;    // Used with fread to see how much data was read
 
-    int myLow;        // Low for current process receiving matrix data
-    int numRows;         // How many rows a process has, used for distribution
-    int nextLow;      // Low for next process receiving matrix data
+    int rowsPerProc;  // How many rows a process has, used for distribution
 
     int i;
     int r;
     int c;
-    char junk;        // Somewhere to toss newlines
+    //char junk;        // Somewhere to toss newlines
 
     MPI_Status status;
 
     // Read in matrix dimensions
     if (myRank == (numProcs - 1)) {
         matrixFile = fopen(filename, "r");
-        
+
         if (matrixFile == NULL 
-            || fscanf(matrixFile, "%d", matSize) != 1) {
+            || fscanf(matrixFile, "%d", &size) != 1) {
 
             MPI_Abort(MPI_COMM_WORLD, OPEN_FILE_ERROR);
         }
     }
 
     // Send dimensions to every process
-    MPI_Bcast(matSize, sizeof(int), MPI_INT, numProcs-1, MPI_COMM_WORLD);
-    if (*matSize == 0) {
-        MPI_Abort(MPI_COMM_WORLD, OPEN_FILE_ERROR);
+    MPI_Bcast(size, sizeof(int), MPI_INT, numProcs-1, MPI_COMM_WORLD);
+    if (size == 0 || size % numProcs != 0) {
+        MPI_Abort(MPI_COMM_WORLD, INVALID_MATRIX);
     }
-
-    // Only allow matrices which divide evenly
-    if (*matSize % numProcs != 0) {
-        MPI_Abot(MPI_COMM_WORD, INVALID_MATRIX);
-    }
-
+    *matrixSize = size;
 
     // Allocate storage 
-    myRows = BLOCK_SIZE(myRank, numProcs, *numRows);
-    myCols = *numCols;
+    myRows = size/numProcs;
+    myCols = size;
 
-    *bulkStorage = (int*)  malloc(myRows * myCols * sizeof(int));
-    *subMatrix   = (int**) malloc(myRows * sizeof(int*));
+    *aStorage = (int*)  malloc(myRows * myCols * sizeof(int));
+    *aMatrix  = (int**) malloc(myRows * sizeof(int*));
 
     myMatrix  = *subMatrix;
     myStorage = *bulkStorage;
