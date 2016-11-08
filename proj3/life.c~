@@ -198,7 +198,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-
         // Print out the matrix
         if (printMod != 0 && (i % printMod) == printMod-1) {
             if (myRank == 0) {
@@ -226,7 +225,7 @@ int main(int argc, char* argv[]) {
     free(bulkStorage);
     free(matrix);
 
-    // Print runtimes to stderr so stdout can be piped to /dev/null
+   // Print runtimes to stderr so stdout can be piped to /dev/null
     endTime = MPI_Wtime();
     if (myRank == 0) {
        fprintf(stderr, "%d,%d,%d,%d,%d,%.15f,%.15f,%.15f\n", numProcs,
@@ -234,8 +233,8 @@ int main(int argc, char* argv[]) {
                      seqToPar-startTime, parToSeq-startTime, endTime-startTime); 
     }
 
-    MPI_Finalize();
-    return 0;
+	MPI_Finalize();
+	return 0;
 }
 
 
@@ -262,9 +261,10 @@ void readRowStripedMatrix(char* filename, char*** subMatrix, char** bulkStorage,
     int i;
     int r;
     int c;
-    char junk;        // Somewhere to toss newlines
+    char junk; // Somewhere to toss newlines
 
     MPI_Status status;
+
 
     // Point to the varibles inside dimension
     numRows = &(dimension->numRows);
@@ -329,10 +329,7 @@ void readRowStripedMatrix(char* filename, char*** subMatrix, char** bulkStorage,
                 myMatrix[0][c] = 0;
                 myMatrix[size + 1][c] = 0;
             }
-
-
-
-
+        
             // Read in rows
             bytesRead = 0;
             for (r = 0; r < size; ++r) {
@@ -408,6 +405,9 @@ void exchangeRows(char** matrix, int rank, int numProcs, int rows, int cols) {
 }
 
 
+
+
+
 void printRowStripedMatrix(char** subMatrix, int numRows, 
                             int myRows, int myCols, int myRank, int numProcs) {
     
@@ -417,12 +417,13 @@ void printRowStripedMatrix(char** subMatrix, int numRows,
     int i;
 
     int maxRows;
-    int myLow;
-    int nextLow;
-    int size;
 
     MPI_Status status;
     int prompt;
+
+    int myLow;
+    int nextLow;
+    int size;
 
 
     if (myRank == 0) {

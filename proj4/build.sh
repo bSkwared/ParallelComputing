@@ -1,0 +1,1 @@
+mpicc life.c -lm

@@ -42,7 +42,6 @@ struct dimensions {
 };
 typedef struct dimensions Dimensions;
 
-
 // Reads a matrix from a file and sends the blocks to coreesponding processes
 void readRowStripedMatrix(
     char*       filename,    // Name of file with matrix
@@ -52,14 +51,11 @@ void readRowStripedMatrix(
     int         myRank,
     int         numProcs);
 
-
 // Exchanges rows up and down so everyone has what they need each iteration
 void exchangeRows(char** matrix, int rank, int numProcs, int rows, int cols);
 
-
 // Prints out a matrix that is rows x cols
 void printSubmatrix(char **subMatrix, int rows, int cols);
-
 
 // Gets all row information from processes and prints the matrix
 void printRowStripedMatrix(char** subMatrix, int numRows, 
@@ -72,7 +68,7 @@ int main(int argc, char* argv[]) {
     double parToSeq;  // Seconds at end of loop
     double endTime;   // Seconds at end of program
 
-    int myRank;       // Which number process I am [0, (n-1)]
+	int myRank;       // Which number process I am [0, (n-1)]
     int numProcs;     // How many processes there are going to be
 
     int i;   // Used for iterating things
@@ -83,11 +79,11 @@ int main(int argc, char* argv[]) {
     const int MAX_FILE_LEN = 256; // Maximum length of a filename
     char filename[MAX_FILE_LEN];  // Filename of matrix
 
-    char* bulkStorage;    // Bulk storage for my portion of the matrix
-    char** matrix;        // 2D version of bulk storage                
+    char* bulkStorage; // Bulk storage for my portion of the matrix
+    char** matrix;     // 2D version of bulk storage                
 
-    Dimensions d;         // Dimensions of global matrix
-    int myRows;           // Dimensions of my matrix
+    Dimensions d;      // Dimensions of global matrix
+    int myRows;        // Dimensions of my matrix
     int myCols;
 
     int*  counterStorage; // Bulk storage for counting neighbors
@@ -104,7 +100,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Parse command line arguments
     numIterations = atoi(argv[2]);
     if (numIterations <= 0) {
         printf("\nError: number of iterations must be a positive integer");
@@ -121,12 +116,11 @@ int main(int argc, char* argv[]) {
 
 
 	// Begin MPI
-    MPI_Init(&argc, &argv);
-    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
+	MPI_Init(&argc, &argv);
+	MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
+	MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
     startTime = MPI_Wtime();
-
 
     // Read the matrix in from file and get my portion of it
     readRowStripedMatrix(filename, &matrix, &bulkStorage, &d, myRank, numProcs);
@@ -151,7 +145,6 @@ int main(int argc, char* argv[]) {
     for (i = 1; i < myRows-2; ++i) {
         counter[i] = counter[i-1] + (myCols-2);
     }
-
 
     // Print matrix once before modifying it
     printRowStripedMatrix(matrix, d.numRows, myRows, myCols, myRank, numProcs);
@@ -198,7 +191,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-
         // Print out the matrix
         if (printMod != 0 && (i % printMod) == printMod-1) {
             if (myRank == 0) {
@@ -226,7 +218,7 @@ int main(int argc, char* argv[]) {
     free(bulkStorage);
     free(matrix);
 
-    // Print runtimes to stderr so stdout can be piped to /dev/null
+   // Print runtimes
     endTime = MPI_Wtime();
     if (myRank == 0) {
        fprintf(stderr, "%d,%d,%d,%d,%d,%.15f,%.15f,%.15f\n", numProcs,
@@ -234,8 +226,8 @@ int main(int argc, char* argv[]) {
                      seqToPar-startTime, parToSeq-startTime, endTime-startTime); 
     }
 
-    MPI_Finalize();
-    return 0;
+	MPI_Finalize();
+	return 0;
 }
 
 
@@ -244,29 +236,31 @@ int main(int argc, char* argv[]) {
 void readRowStripedMatrix(char* filename, char*** subMatrix, char** bulkStorage,
                           Dimensions* dimension, int myRank, int numProcs) {
 
-    char** myMatrix;  // Dereferennced version of subMatrix
-    char*  myStorage; // Dereferenced version of bulkStorage
+    char** myMatrix;
+    char*  myStorage;
 
-    int* numRows;     // Rows and cols in global matrix
-    int* numCols; 
-    int myRows;       // Rows and cols in my portion of matrix
+    int* numRows;
+    int* numCols;
+    int myRows;
     int myCols;
 
-    FILE* matrixFile; // File pointer for matrix file
-    int bytesRead;    // Used with fread to see how much data was read
+    FILE* matrixFile;
 
-    int myLow;        // Low for current process receiving matrix data
-    int size;         // How many rows a process has, used for distribution
-    int nextLow;      // Low for next process receiving matrix data
-
+    int numRead; 
     int i;
+    int bytesRead;
+
+    int myLow;
+    int size;
+    int nextLow;
+
     int r;
     int c;
-    char junk;        // Somewhere to toss newlines
+    char junk;
 
     MPI_Status status;
 
-    // Point to the varibles inside dimension
+    
     numRows = &(dimension->numRows);
     numCols = &(dimension->numCols);
 
@@ -329,10 +323,7 @@ void readRowStripedMatrix(char* filename, char*** subMatrix, char** bulkStorage,
                 myMatrix[0][c] = 0;
                 myMatrix[size + 1][c] = 0;
             }
-
-
-
-
+        
             // Read in rows
             bytesRead = 0;
             for (r = 0; r < size; ++r) {
@@ -385,13 +376,11 @@ void exchangeRows(char** matrix, int rank, int numProcs, int rows, int cols) {
     
     MPI_Status status;
 
-    // If I am not process 0, send my bottom row to the process below me
     if (rank > 0) {
          MPI_Send(matrix[1], cols, MPI_CHAR, rank - 1, 
                      DATA_MSG, MPI_COMM_WORLD);
     }
  
-    // If there is a process above me, get their bottom row and send them my top
     if (rank < numProcs - 1) {
          MPI_Recv(matrix[rows - 1], cols, MPI_CHAR, rank + 1,
                      DATA_MSG, MPI_COMM_WORLD, &status);
@@ -399,8 +388,7 @@ void exchangeRows(char** matrix, int rank, int numProcs, int rows, int cols) {
          MPI_Send(matrix[rows - 2], cols, MPI_CHAR, rank + 1, 
                      DATA_MSG, MPI_COMM_WORLD);
     }
-    
-    // If There is someone below me, get their top row
+ 
     if (rank > 0) {
          MPI_Recv(matrix[0], cols, MPI_CHAR, rank - 1,
                      DATA_MSG, MPI_COMM_WORLD, &status);
@@ -408,31 +396,31 @@ void exchangeRows(char** matrix, int rank, int numProcs, int rows, int cols) {
 }
 
 
+
+
+
 void printRowStripedMatrix(char** subMatrix, int numRows, 
                             int myRows, int myCols, int myRank, int numProcs) {
     
-    char*  bulkStorage;     // Temporary storage for data from other processes
+    char*  bulkStorage;
     char** receivedMatrix;
 
     int i;
 
     int maxRows;
-    int myLow;
-    int nextLow;
-    int size;
 
     MPI_Status status;
     int prompt;
 
+    int myLow;
+    int nextLow;
+    int size;
+
 
     if (myRank == 0) {
-        // Print my submatrix
         printSubmatrix(subMatrix, myRows, myCols);
 
-        // Print everyone elses
         if (numProcs > 1) {
-
-            // Allocate and storage and hookup 2D matrix
             maxRows = BLOCK_SIZE(numProcs-1, numProcs, numRows) + 2;
             bulkStorage    = (char*)  malloc(maxRows * myCols);
             receivedMatrix = (char**) malloc(maxRows * sizeof(char*));
@@ -446,11 +434,8 @@ void printRowStripedMatrix(char** subMatrix, int numRows,
                 receivedMatrix[i] = receivedMatrix[i-1] + myCols;
             }
 
-            
-            // Receive matrices from everyone else and print them out
             myLow = BLOCK_LOW(1, numProcs, numRows);
             for (i = 1; i < numProcs; ++i) {
-                // Calculate size of matrix to be received from process i
                 nextLow = BLOCK_LOW(i+1, numProcs, numRows);
                 size = nextLow - myLow + 2;
                 myLow = nextLow;
@@ -469,7 +454,6 @@ void printRowStripedMatrix(char** subMatrix, int numRows,
         }
 
     } else {
-        // If I am not process 0, send my submatrix to him
         MPI_Recv(&prompt, 1, MPI_INT, 0, PROMPT_MSG, MPI_COMM_WORLD, &status);
         MPI_Send(*subMatrix, myRows*myCols, MPI_CHAR, 0, 
                     RESPONSE_MSG, MPI_COMM_WORLD);
