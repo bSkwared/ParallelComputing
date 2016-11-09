@@ -137,6 +137,12 @@ int main(int argc, char* argv[]) {
         cMatrix[i] = cMatrix[i-1] + myCols;
     }
 
+    for (r = 0; r < myRows; ++r) {
+        for (c = 0; c < myCols; ++c) {
+            cMatrix[r][c] = aMatrix[r][c];
+        }
+    }
+
     // Print matrix once before modifying it
     printRowStripedMatrix(cMatrix, matrixSize, myRank, numProcs);
 
