@@ -112,7 +112,6 @@ int main(int argc, char* argv[]) {
 
     startTime = MPI_Wtime();
 
-
     // Read the matrix in from file and get my portion of it
     readRowStripedMatrices(filename, &aMatrix, &aStorage, &bMatrix, &bStorage,
                             &matrixSize, myRank, numProcs);
@@ -137,7 +136,6 @@ int main(int argc, char* argv[]) {
     for (i = 1; i < myRows; ++i) {
         cMatrix[i] = cMatrix[i-1] + myCols;
     }
-
 
     // Print matrix once before modifying it
     printRowStripedMatrix(cMatrix, matrixSize, myRank, numProcs);
@@ -369,7 +367,7 @@ void printRowStripedMatrix(long long** matrix, int size, int rank, int numProcs)
             }
 
             receivedMatrix[0] = bulkStorage;
-            for (i = 1; i < maxRows; ++i) {
+            for (i = 1; i < rowsPerProc; ++i) {
                 receivedMatrix[i] = receivedMatrix[i-1] + numCols;
             }
 
@@ -381,11 +379,11 @@ void printRowStripedMatrix(long long** matrix, int size, int rank, int numProcs)
                 MPI_Send(&prompt, 1, MPI_INT, i, PROMPT_MSG, MPI_COMM_WORLD);
 
                 // Get matrix from proc i
-                MPI_Recv(bulkStorage, size*numCols, MPI_LONG_LONG, i, 
+                MPI_Recv(bulkStorage, rowsPerProc*numCols, MPI_LONG_LONG, i, 
                             RESPONSE_MSG, MPI_COMM_WORLD, &status);
 
                 // Print matrix from proc i
-                printSubmatrix(receivedMatrix, size, numCols);
+                printSubmatrix(receivedMatrix, rowsPerProc, numCols);
             }
     
             free(receivedMatrix);
