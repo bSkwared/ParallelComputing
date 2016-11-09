@@ -160,9 +160,9 @@ int main(int argc, char* argv[]) {
     free(aMatrix);
 
     free(bStorage);
-    free(bStorage);
+    free(bMatrix);
     
-    free(cMatrix);
+    free(cStorage);
     free(cMatrix);
 
     // Print runtimes to stderr so stdout can be piped to /dev/null
