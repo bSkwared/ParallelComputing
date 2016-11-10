@@ -70,7 +70,8 @@ int main(int argc, char* argv[]) {
     int i;   // Used for iterating things
     int r;   // Used for iterating rows
     int c;   // Used for iteration columns
-    int sum; // Used for summing somethings
+    
+    long long sum; // Used for summing somethings
 
     const int MAX_FILE_LEN = 256; // Maximum length of a filename
     char filename[MAX_FILE_LEN];  // Filename of matrix
@@ -142,22 +143,25 @@ int main(int argc, char* argv[]) {
             cMatrix[r][c] = aMatrix[r][c];
         }
     }
-
-    // Print matrix once before modifying it
-    printRowStripedMatrix(cMatrix, matrixSize, myRank, numProcs);
-
     // BEGIN parallel operations
     seqToPar = MPI_Wtime();
+    startTime = MPI_Wtime();
+    for (r = 0; r < myRows; ++r) {
+        for (c = 0; c < myCols; ++c) {
+            sum = 0;
+            for (i = 0; i < matrixSize; ++i) {
+                sum += aMatrix[r][i] * bMatrix[i][c];
+            }
+            cMatrix[r][c] = sum;
+        }
+    }
+    endTime = MPI_Wtime();
+    // Print matrix once before modifying it
+    //printRowStripedMatrix(cMatrix, matrixSize, myRank, numProcs);
 
 
     // END parallel operatinos
     parToSeq = MPI_Wtime();
-
-    // Print out the resulting matrix
-    if (myRank == 0) {
-        printf("\n\n");
-    }
-    
     
     // Free dynami memory
     free(aStorage);
@@ -170,9 +174,9 @@ int main(int argc, char* argv[]) {
     free(cMatrix);
 
     // Print runtimes to stderr so stdout can be piped to /dev/null
-    endTime = MPI_Wtime();
+    //endTime = MPI_Wtime();
     if (myRank == 0) {
-       fprintf(stderr, "%d,%d,"/*%d,%d,%d,%.15f,%.15f,*/"%.15f\n", numProcs,
+       fprintf(stderr, /*"%d,*/"%d,"/*%d,%d,%d,%.15f,%.15f,*/"%.15f\n",/* numProcs,*/
                      matrixSize, endTime-startTime);//seqToPar-startTime, parToSeq-startTime, endTime-startTime); 
     }
 
@@ -416,6 +420,82 @@ void printSubmatrix(long long **subMatrix, int numRows, int numCols) {
        printf("\n");
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void matrixMultiple(int crow, int ccol, int arow, int acol, int brow, int bcol, int size, int matSize) {
+
+    int split[3];
+    int i, j, k;
+    double *aptr, *bptr, *cptr;
+
+
+    if (size*size > THREASHOLD) {
+
+        split[0] = 0;
+        split[1] = size/2;
+        split[2] = size-size/2;
+
+        for (i = 0; i < 2; ++i) {
+            for (j = 0; j < 2; ++j) {
+                for (k = 0; k < 2; ++k) {
+                    matrixMultiply(crow + split[i], ccol + split[j],
+                                   arow + split[i], acol + split[k],
+                                   brow + split[k], bcol + split[j],
+                                   split[i+1], split[k+1], split[j+1]);
+                }
+            }
+        }
+
+    } else {
+        
+        for (i = 0; i < size; ++i) {
+            for (j = 0; j < size; ++j) {
+                cptr = &c[crow+i][ccol+j];
+                aptr = &a[arow+i][acol+j];
+                bptr = &b[brow+i][bcol+j];
+
+                for (k = 0; k < size; ++k) {
+                    *cptr += *(aptr++) * (*bptr);
+                    btr += matSize;
+                }
+            }
+        }
+
+
+    }
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
