@@ -15,7 +15,7 @@
 #include <string.h>
 #include <time.h>
 
-#define THRESHOLD 16
+#define THRESHOLD 256
 
 #define DATA_MSG     0
 #define PROMPT_MSG   1
@@ -152,16 +152,9 @@ int main(int argc, char* argv[]) {
     seqToPar = MPI_Wtime();
     startTime = MPI_Wtime();
 
-    for (i = 0; i < matrixSize; ++i) {
-        for (j = 0; j < matrixSize; ++j) {
-            printf("%d ", bMatrix[i][j]);
-        }
-        printf("\n");
-    }
-    
-    matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, 0, 0, 0, matrixSize, matrixSize, matrixSize, matrixSize);
+    //matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, 0, 0, 0, matrixSize, matrixSize, matrixSize, matrixSize);
 
-    /*
+    
     for (r = 0; r < myRows; ++r) {
         for (c = 0; c < myCols; ++c) {
             sum = 0;
@@ -170,10 +163,10 @@ int main(int argc, char* argv[]) {
             }
             cMatrix[r][c] = sum;
         }
-    }*/
+    }
     endTime = MPI_Wtime();
     // Print matrix once before modifying it
-    //printRowStripedMatrix(cMatrix, matrixSize, myRank, numProcs);
+    printRowStripedMatrix(cMatrix, matrixSize, myRank, numProcs);
 
 
     // END parallel operatinos
@@ -461,7 +454,6 @@ void matrixMultiply(int **a, int **b, long long **c, int crow, int ccol, int aro
     int i, j, k;
     int *aptr;
     int *bptr;
-    long long *cptr;
 
 int Y,A;
 int G;
@@ -488,30 +480,12 @@ int G;
         
         for (i = 0; i < L; ++i) {
             for (j = 0; j < N; ++j) {
-            printf("%d  %d\n", i, j);
-                cptr = &(c[crow+i][ccol+j]);
                 aptr = &(a[arow+i][acol]);
                 bptr = &(b[brow][bcol+j]);
-                Y = b[brow][bcol];
 
                 for (k = 0; k < M; ++k) {
-                printf("kkkkkkL %d\n", k);
-                    A = *(aptr++);
-                    //B = *bptr;
-                    /*printf("AAAAA");
-                    printf("n\n%p\n\n", bptr);
-                    B = *bptr;
-                    printf("BBBB");
-                    A = A*B;*/
-                    //for (G = 0; G < A; ++G) {
-                    //    *cptr += B;
-                    //}
-                    printf("BBBB %d\n", Y);
-                    Y = 5;
-                    c[crow+i][ccol+j] += ((int)A);
-                    c[crow+i][ccol+j] += ((int)Y);/*
+                    c[crow+i][ccol+j] += *(aptr++) * (*bptr);
                     bptr += matSize;
-                    getchar();*/
                 }
             }
         }
