@@ -15,6 +15,7 @@
 #include <string.h>
 #include <time.h>
 
+#define THRESHOLD 16
 
 #define DATA_MSG     0
 #define PROMPT_MSG   1
@@ -57,6 +58,9 @@ void printSubmatrix(long long **subMatrix, int numRows, int numCols);
 void printRowStripedMatrix(long long** matrix, int size, int rank, int numProcs); 
 
 
+void matrixMultiply(int **a, int **b, long long **c, int crow, int ccol, int arow, int acol, int brow, int bcol, int L, int M, int N, int matSize);
+
+
 int main(int argc, char* argv[]) {
 
     double startTime; // Seconds at start of the program
@@ -68,6 +72,7 @@ int main(int argc, char* argv[]) {
     int numProcs;     // How many processes there are going to be
 
     int i;   // Used for iterating things
+    int j;   // Used for iterating things
     int r;   // Used for iterating rows
     int c;   // Used for iteration columns
     
@@ -146,6 +151,17 @@ int main(int argc, char* argv[]) {
     // BEGIN parallel operations
     seqToPar = MPI_Wtime();
     startTime = MPI_Wtime();
+
+    for (i = 0; i < matrixSize; ++i) {
+        for (j = 0; j < matrixSize; ++j) {
+            printf("%d ", bMatrix[i][j]);
+        }
+        printf("\n");
+    }
+    
+    matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, 0, 0, 0, matrixSize, matrixSize, matrixSize, matrixSize);
+
+    /*
     for (r = 0; r < myRows; ++r) {
         for (c = 0; c < myCols; ++c) {
             sum = 0;
@@ -154,7 +170,7 @@ int main(int argc, char* argv[]) {
             }
             cMatrix[r][c] = sum;
         }
-    }
+    }*/
     endTime = MPI_Wtime();
     // Print matrix once before modifying it
     //printRowStripedMatrix(cMatrix, matrixSize, myRank, numProcs);
@@ -439,48 +455,67 @@ void printSubmatrix(long long **subMatrix, int numRows, int numCols) {
 
 
 
-void matrixMultiple(int crow, int ccol, int arow, int acol, int brow, int bcol, int size, int matSize) {
+void matrixMultiply(int **a, int **b, long long **c, int crow, int ccol, int arow, int acol, int brow, int bcol, int L, int M, int N, int matSize) {
 
-    int split[3];
+    int lhalf[3], mhalf[3], nhalf[3];
     int i, j, k;
-    double *aptr, *bptr, *cptr;
+    int *aptr;
+    int *bptr;
+    long long *cptr;
 
+int Y,A;
+int G;
 
-    if (size*size > THREASHOLD) {
+    if (M*N > THRESHOLD) {
 
-        split[0] = 0;
-        split[1] = size/2;
-        split[2] = size-size/2;
+        lhalf[0] = 0; lhalf[1] = L/2; lhalf[2] = L-L/2;
+        mhalf[1] = 0; mhalf[1] = M/2; mhalf[2] = M-M/2;
+        nhalf[2] = 0; nhalf[1] = N/2; nhalf[2] = N-N/2;
 
         for (i = 0; i < 2; ++i) {
             for (j = 0; j < 2; ++j) {
                 for (k = 0; k < 2; ++k) {
-                    matrixMultiply(crow + split[i], ccol + split[j],
-                                   arow + split[i], acol + split[k],
-                                   brow + split[k], bcol + split[j],
-                                   split[i+1], split[k+1], split[j+1]);
+                    matrixMultiply(a, b, c,
+                                   crow + lhalf[i], ccol + mhalf[j],
+                                   arow + lhalf[i], acol + mhalf[k],
+                                   brow + mhalf[k], bcol + nhalf[j],
+                                   lhalf[i+1], mhalf[k+1], nhalf[j+1], matSize);
                 }
             }
         }
 
     } else {
         
-        for (i = 0; i < size; ++i) {
-            for (j = 0; j < size; ++j) {
-                cptr = &c[crow+i][ccol+j];
-                aptr = &a[arow+i][acol+j];
-                bptr = &b[brow+i][bcol+j];
+        for (i = 0; i < L; ++i) {
+            for (j = 0; j < N; ++j) {
+            printf("%d  %d\n", i, j);
+                cptr = &(c[crow+i][ccol+j]);
+                aptr = &(a[arow+i][acol]);
+                bptr = &(b[brow][bcol+j]);
+                Y = b[brow][bcol];
 
-                for (k = 0; k < size; ++k) {
-                    *cptr += *(aptr++) * (*bptr);
-                    btr += matSize;
+                for (k = 0; k < M; ++k) {
+                printf("kkkkkkL %d\n", k);
+                    A = *(aptr++);
+                    //B = *bptr;
+                    /*printf("AAAAA");
+                    printf("n\n%p\n\n", bptr);
+                    B = *bptr;
+                    printf("BBBB");
+                    A = A*B;*/
+                    //for (G = 0; G < A; ++G) {
+                    //    *cptr += B;
+                    //}
+                    printf("BBBB %d\n", Y);
+                    Y = 5;
+                    c[crow+i][ccol+j] += ((int)A);
+                    c[crow+i][ccol+j] += ((int)Y);/*
+                    bptr += matSize;
+                    getchar();*/
                 }
             }
         }
-
-
     }
-
 }
 
 
