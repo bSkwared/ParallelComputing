@@ -459,16 +459,17 @@ void matrixMultiply(int **a, int **b, long long **c, int crow, int ccol, int aro
 
 int Y,A;
 int G;
-
+printf("arow: %d, acol: %d\nbrow: %d, bcol: %d\n,crow:%d, ccol:%d\n", arow, acol, brow, bcol, crow, ccol);
     if (M*N > THRESHOLD) {
 printf("NNNNOOO");
         lhalf[0] = 0; lhalf[1] = L/2; lhalf[2] = L-L/2;
-        mhalf[1] = 0; mhalf[1] = M/2; mhalf[2] = M-M/2;
-        nhalf[2] = 0; nhalf[1] = N/2; nhalf[2] = N-N/2;
+        mhalf[0] = 0; mhalf[1] = M/2; mhalf[2] = M-M/2;
+        nhalf[0] = 0; nhalf[1] = N/2; nhalf[2] = N-N/2;
 
         for (i = 0; i < 2; ++i) {
             for (j = 0; j < 2; ++j) {
                 for (k = 0; k < 2; ++k) {
+                //printf("i: %d   j: %d   i: %d nfalh:%d\n", i, j, k, nhalf[0]);
                     matrixMultiply(a, b, c,
                                    crow + lhalf[i], ccol + mhalf[j],
                                    arow + lhalf[i], acol + mhalf[k],
@@ -487,6 +488,7 @@ printf("NNNNOOO");
                 cptr = &(c[crow+i][ccol+j]);
                 sum = 0;
                 for (k = 0; k < M; ++k) {
+                //printf("i    %d   j   %d   k %d", i, j, k);
                     sum += *(aptr++) * (*bptr);
                     bptr += matSize;
                 }
