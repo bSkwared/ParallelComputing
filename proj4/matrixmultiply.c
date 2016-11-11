@@ -152,8 +152,8 @@ int main(int argc, char* argv[]) {
     seqToPar = MPI_Wtime();
     startTime = MPI_Wtime();
 
-    //matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, 0, 0, 0, matrixSize, matrixSize, matrixSize, matrixSize);
-
+    matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, 0, 0, 0, matrixSize, matrixSize, matrixSize, matrixSize);
+/*
     
     for (r = 0; r < myRows; ++r) {
         for (c = 0; c < myCols; ++c) {
@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
             }
             cMatrix[r][c] = sum;
         }
-    }
+    }*/
     endTime = MPI_Wtime();
     // Print matrix once before modifying it
     printRowStripedMatrix(cMatrix, matrixSize, myRank, numProcs);
@@ -454,12 +454,14 @@ void matrixMultiply(int **a, int **b, long long **c, int crow, int ccol, int aro
     int i, j, k;
     int *aptr;
     int *bptr;
+    long long *cptr;
+    long long sum;
 
 int Y,A;
 int G;
 
     if (M*N > THRESHOLD) {
-
+printf("NNNNOOO");
         lhalf[0] = 0; lhalf[1] = L/2; lhalf[2] = L-L/2;
         mhalf[1] = 0; mhalf[1] = M/2; mhalf[2] = M-M/2;
         nhalf[2] = 0; nhalf[1] = N/2; nhalf[2] = N-N/2;
@@ -477,16 +479,29 @@ int G;
         }
 
     } else {
-        
+       /* 
+    for (r = 0; r < myRows; ++r) {
+        for (c = 0; c < myCols; ++c) {
+            sum = 0;
+            for (i = 0; i < matrixSize; ++i) {
+                sum += aMatrix[r][i] * bMatrix[i][c];
+            }
+            cMatrix[r][c] = sum;
+        }
+    }*/
+
         for (i = 0; i < L; ++i) {
             for (j = 0; j < N; ++j) {
                 aptr = &(a[arow+i][acol]);
                 bptr = &(b[brow][bcol+j]);
-
+                cptr = &(c[crow+i][ccol+j]);
+                sum = 0;
                 for (k = 0; k < M; ++k) {
-                    c[crow+i][ccol+j] += *(aptr++) * (*bptr);
+                    //sum += a[arow+i][acol+k] * b[brow+k][bcol+j];
+                    sum += *(aptr++) * (*bptr);
                     bptr += matSize;
                 }
+                c[crow+i][ccol+j] = sum;
             }
         }
     }
