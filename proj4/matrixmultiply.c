@@ -15,7 +15,7 @@
 #include <string.h>
 #include <time.h>
 
-#define THRESHOLD 256
+#define THRESHOLD 64
 
 #define DATA_MSG     0
 #define PROMPT_MSG   1
@@ -479,16 +479,6 @@ printf("NNNNOOO");
         }
 
     } else {
-       /* 
-    for (r = 0; r < myRows; ++r) {
-        for (c = 0; c < myCols; ++c) {
-            sum = 0;
-            for (i = 0; i < matrixSize; ++i) {
-                sum += aMatrix[r][i] * bMatrix[i][c];
-            }
-            cMatrix[r][c] = sum;
-        }
-    }*/
 
         for (i = 0; i < L; ++i) {
             for (j = 0; j < N; ++j) {
@@ -497,7 +487,6 @@ printf("NNNNOOO");
                 cptr = &(c[crow+i][ccol+j]);
                 sum = 0;
                 for (k = 0; k < M; ++k) {
-                    //sum += a[arow+i][acol+k] * b[brow+k][bcol+j];
                     sum += *(aptr++) * (*bptr);
                     bptr += matSize;
                 }
