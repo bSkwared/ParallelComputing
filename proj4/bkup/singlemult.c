@@ -47,7 +47,7 @@ void readRowStripedMatrices(
 
 
 // Exchanges rows up and down so everyone has what they need each iteration
-void exchangeBlocks(int* bStorage, int bSize, int rank, int numProcs);
+void exchangeRows(char** matrix, int rank, int numProcs, int rows, int cols);
 
 
 // Prints out a matrix that is rows x cols
@@ -86,7 +86,6 @@ int main(int argc, char* argv[]) {
 
     int*  bStorage;
     int** bMatrix;
-    int   bSize;
 
     long long*  cStorage;
     long long** cMatrix;
@@ -127,7 +126,6 @@ int main(int argc, char* argv[]) {
     // How big will my portion of the matrix be?
     myRows = matrixSize / numProcs;
     myCols = matrixSize;
-    bSize  = myRows * myCols;
 
 
     // Allocate storage for neighbor counting
@@ -154,12 +152,7 @@ int main(int argc, char* argv[]) {
     seqToPar = MPI_Wtime();
     startTime = MPI_Wtime();
 
-    for (i = 0; i < numProcs; ++i) {
-        matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, 0, 0, 0, matrixSize, matrixSize, matrixSize, matrixSize);
-        if (i != numProcs-1) {
-            exchangeBlocks(bStorage, bSize, myRank, numProcs);
-        }
-    }
+    matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, 0, 0, 0, matrixSize, matrixSize, matrixSize, matrixSize);
 /*
     
     for (r = 0; r < myRows; ++r) {
@@ -329,26 +322,10 @@ void readRowStripedMatrices(char* filename, int*** aMatrix, int** aStorage,
 }
 
 
-void exchangeBlocks(int* bStorage, int bSize, int myRank, int numProcs) {
+void exchangeRows(char** matrix, int rank, int numProcs, int rows, int cols) {
     
     MPI_Status status;
-    int sendTo;
-    int recvFrom;
 
-    int* tempStorage;
-    int i;
-    
-    tempStorage = (int*) malloc(bSize*sizeof(int));
-    sendTo   = (myRank+1) % numProcs;
-    recvFrom = (myRank+numProcs-1) % numProcs;
-
-    MPI_Send(bStorage, bSize, MPI_INT, sendTo, DATA_MSG, MPI_COMM_WORLD);
-    MPI_Recv(tempStorage, bSize, MPI_INT, recvFrom, DATA_MSG, MPI_COMM_WORLD, &status);
-
-    for (i = 0; i < bSize; ++i) {
-        bStorage[i] = tempStorage[i];
-    }
-/*
     // If I am not process 0, send my bottom row to the process below me
     if (rank > 0) {
          MPI_Send(matrix[1], cols, MPI_CHAR, rank - 1, 
@@ -368,8 +345,7 @@ void exchangeBlocks(int* bStorage, int bSize, int myRank, int numProcs) {
     if (rank > 0) {
          MPI_Recv(matrix[0], cols, MPI_CHAR, rank - 1,
                      DATA_MSG, MPI_COMM_WORLD, &status);
-    }*/
-    free (tempStorage);
+    }
 }
 
 
