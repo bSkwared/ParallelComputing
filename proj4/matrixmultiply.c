@@ -104,8 +104,8 @@ int main(int argc, char* argv[]) {
 
 
     // Check command line arguments
-    if (argc != 2) {
-        printf("\nUsage: %s filename\n", argv[0]);
+    if (argc != 3) {
+        printf("\nUsage: %s filename algorithm\n", argv[0]);
         return 1;
     }
 
@@ -144,42 +144,61 @@ int main(int argc, char* argv[]) {
     for (i = 1; i < myRows; ++i) {
         cMatrix[i] = cMatrix[i-1] + myCols;
     }
-
-    for (r = 0; r < myRows; ++r) {
-        for (c = 0; c < myCols; ++c) {
-            cMatrix[r][c] = 0;//aMatrix[r][c];
-        }
-    }
-    // BEGIN parallel operations
-    seqToPar = MPI_Wtime();
-    startTime = MPI_Wtime();
-    //printf("rnk: %d     rws: %d,    cols: %d\n", myRank, myRows, myCols);
-
-    for (i = 0; i < numProcs; ++i) {
-    //printf("rnk: %d     arow: %d,    cols: %d\n", myRank, ((i+myRank)%numProcs)*myRows, i);
-        matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, ((i+myRank)%numProcs)*myRows, 0, 0, myRows, myRows, myCols, matrixSize);
-        if (i != numProcs-1) {
-            exchangeBlocks(bStorage, bSize, myRank, numProcs);
-        }
-    }
-/*
     
-    for (r = 0; r < myRows; ++r) {
-        for (c = 0; c < myCols; ++c) {
-            sum = 0;
-            for (i = 0; i < matrixSize; ++i) {
-                sum += aMatrix[r][i] * bMatrix[i][c];
+        seqToPar = MPI_Wtime();
+    if(argv[2][0] == '3'){ 
+        for (r = 0; r < myRows; ++r) {
+            for (c = 0; c < myCols; ++c) {
+                cMatrix[r][c] = 0;//aMatrix[r][c];
             }
-            cMatrix[r][c] = sum;
         }
-    }*/
-    endTime = MPI_Wtime();
+    
+        // BEGIN parallel operations
+        //printf("rnk: %d     rws: %d,    cols: %d\n", myRank, myRows, myCols);
+    
+        for (i = 0; i < numProcs; ++i) {
+        //printf("rnk: %d     arow: %d,    cols: %d\n", myRank, ((i+myRank)%numProcs)*myRows, i);
+            matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, ((i+myRank)%numProcs)*myRows, 0, 0, myRows, myRows, myCols, matrixSize);
+            if (i != numProcs-1) {
+                exchangeBlocks(bStorage, bSize, myRank, numProcs);
+            }
+        }
+    }
+    else if(argv[2][0] == '2'){
+        for (r = 0; r < myRows; ++r) {
+            for (c = 0; c < myCols; ++c) {
+                cMatrix[r][c] = 0;//aMatrix[r][c];
+            }
+        }
+    
+        // BEGIN parallel operations
+        seqToPar = MPI_Wtime();
+        //printf("rnk: %d     rws: %d,    cols: %d\n", myRank, myRows, myCols);
+    
+        for (i = 0; i < numProcs; ++i) {
+        //printf("rnk: %d     arow: %d,    cols: %d\n", myRank, ((i+myRank)%numProcs)*myRows, i);
+            matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, ((i+myRank)%numProcs)*myRows, 0, 0, myRows, myRows, myCols, matrixSize);
+        }
+
+    }
+    else if(argv[2][0] == '1'){
+      for (r = 0; r < myRows; ++r) {
+          for (c = 0; c < myCols; ++c) {
+              sum = 0;
+              for (i = 0; i < matrixSize; ++i) {
+                  sum += aMatrix[r][i] * bMatrix[i][c];
+              }
+              cMatrix[r][c] = sum;
+          }
+      }
+    }
+    parToSeq = MPI_Wtime();
+    //endTime = MPI_Wtime();
     // Print matrix once before modifying it
     printRowStripedMatrix(cMatrix, matrixSize, myRank, numProcs);
 
 
     // END parallel operatinos
-    parToSeq = MPI_Wtime();
     
     // Free dynami memory
     free(aStorage);
@@ -192,10 +211,10 @@ int main(int argc, char* argv[]) {
     free(cMatrix);
 
     // Print runtimes to stderr so stdout can be piped to /dev/null
-    //endTime = MPI_Wtime();
+    endTime = MPI_Wtime();
     if (myRank == 0) {
-       fprintf(stderr, /*"%d,*/"%d,"/*%d,%d,%d,%.15f,%.15f,*/"%.15f\n",/* numProcs,*/
-                     matrixSize, endTime-startTime);//seqToPar-startTime, parToSeq-startTime, endTime-startTime); 
+       fprintf(stderr, "%d,%d,"/*%d,%d,%d,%.15f,*/"%.15f,%.15f\n", numProcs,
+                     matrixSize, endTime-startTime, parToSeq-seqToPar);//startTime, parToSeq-startTime, endTime-startTime); 
     }
 
     MPI_Finalize();
@@ -334,6 +353,8 @@ void readRowStripedMatrices(char* filename, int*** aMatrix, int** aStorage,
 void exchangeBlocks(int* bStorage, int bSize, int myRank, int numProcs) {
     
     MPI_Status status;
+    MPI_Request sReq;
+    MPI_Request rReq;
     int sendTo;
     int recvFrom;
 
@@ -345,13 +366,16 @@ void exchangeBlocks(int* bStorage, int bSize, int myRank, int numProcs) {
     sendTo = (myRank+numProcs-1) % numProcs;
     //printf("mr: %d   snd: %d   rcv: %d\n", myRank, sendTo, recvFrom);
 
-    if (myRank % 2 == 0) {
-        MPI_Send(bStorage, bSize, MPI_INT, sendTo, DATA_MSG, MPI_COMM_WORLD);
-        MPI_Recv(tempStorage, bSize, MPI_INT, recvFrom, DATA_MSG, MPI_COMM_WORLD, &status);
-    } else {
-        MPI_Recv(tempStorage, bSize, MPI_INT, recvFrom, DATA_MSG, MPI_COMM_WORLD, &status);
-        MPI_Send(bStorage, bSize, MPI_INT, sendTo, DATA_MSG, MPI_COMM_WORLD);
-    }
+    //if (myRank % 2 == 0) {
+        MPI_Isend(bStorage, bSize, MPI_INT, sendTo, DATA_MSG, MPI_COMM_WORLD, &sReq);
+        MPI_Irecv(tempStorage, bSize, MPI_INT, recvFrom, DATA_MSG, MPI_COMM_WORLD, &rReq);
+    //} else {
+    //    MPI_Recv(tempStorage, bSize, MPI_INT, recvFrom, DATA_MSG, MPI_COMM_WORLD, &status);
+    //    MPI_Send(bStorage, bSize, MPI_INT, sendTo, DATA_MSG, MPI_COMM_WORLD);
+    //}
+
+    MPI_Wait(&sReq, &status);
+    MPI_Wait(&rReq, &status);
 
     for (i = 0; i < bSize; ++i) {
         bStorage[i] = tempStorage[i];
