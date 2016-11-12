@@ -15,7 +15,7 @@
 #include <string.h>
 #include <time.h>
 
-#define THRESHOLD 16
+#define THRESHOLD 99916
 
 #define DATA_MSG     0
 #define PROMPT_MSG   1
@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
     startTime = MPI_Wtime();
 
     for (i = 0; i < numProcs; ++i) {
-        matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, 0, 0, 0, matrixSize, matrixSize, matrixSize, matrixSize);
+        matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, i*myRows, 0, 0, myRows, myRows, myCols, matrixSize);
         if (i != numProcs-1) {
             exchangeBlocks(bStorage, bSize, myRank, numProcs);
         }
@@ -342,8 +342,13 @@ void exchangeBlocks(int* bStorage, int bSize, int myRank, int numProcs) {
     sendTo   = (myRank+1) % numProcs;
     recvFrom = (myRank+numProcs-1) % numProcs;
 
-    MPI_Send(bStorage, bSize, MPI_INT, sendTo, DATA_MSG, MPI_COMM_WORLD);
-    MPI_Recv(tempStorage, bSize, MPI_INT, recvFrom, DATA_MSG, MPI_COMM_WORLD, &status);
+    if (myRank % 2 == 0) {
+        MPI_Send(bStorage, bSize, MPI_INT, sendTo, DATA_MSG, MPI_COMM_WORLD);
+        MPI_Recv(tempStorage, bSize, MPI_INT, recvFrom, DATA_MSG, MPI_COMM_WORLD, &status);
+    } else {
+        MPI_Recv(tempStorage, bSize, MPI_INT, recvFrom, DATA_MSG, MPI_COMM_WORLD, &status);
+        MPI_Send(bStorage, bSize, MPI_INT, sendTo, DATA_MSG, MPI_COMM_WORLD);
+    }
 
     for (i = 0; i < bSize; ++i) {
         bStorage[i] = tempStorage[i];
