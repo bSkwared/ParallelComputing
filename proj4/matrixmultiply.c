@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
     startTime = MPI_Wtime();
 
     for (i = 0; i < numProcs; ++i) {
-        matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, i*myRows, 0, 0, myRows, myRows, myCols, matrixSize);
+        matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, ((i+myRank)%numProcs)*myRows, 0, 0, myRows, myRows, myCols, matrixSize);
         if (i != numProcs-1) {
             exchangeBlocks(bStorage, bSize, myRank, numProcs);
         }
@@ -488,9 +488,9 @@ void matrixMultiply(int **a, int **b, long long **c, int crow, int ccol, int aro
 
 int Y,A;
 int G;
-printf("\n\narow: %d, acol: %d\nbrow: %d, bcol: %d\ncrow:%d, ccol:%d\n", arow, acol, brow, bcol, crow, ccol);
+//printf("\n\narow: %d, acol: %d\nbrow: %d, bcol: %d\ncrow:%d, ccol:%d\n", arow, acol, brow, bcol, crow, ccol);
     if (M*N > THRESHOLD) {
-printf("NNNNOOO");
+//printf("NNNNOOO");
         lhalf[0] = 0; lhalf[1] = L/2; lhalf[2] = L-L/2;
         mhalf[0] = 0; mhalf[1] = M/2; mhalf[2] = M-M/2;
         nhalf[0] = 0; nhalf[1] = N/2; nhalf[2] = N-N/2;
