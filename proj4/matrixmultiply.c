@@ -153,8 +153,10 @@ int main(int argc, char* argv[]) {
     // BEGIN parallel operations
     seqToPar = MPI_Wtime();
     startTime = MPI_Wtime();
+    //printf("rnk: %d     rws: %d,    cols: %d\n", myRank, myRows, myCols);
 
     for (i = 0; i < numProcs; ++i) {
+    //printf("rnk: %d     arow: %d,    cols: %d\n", myRank, ((i+myRank)%numProcs)*myRows, i);
         matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, ((i+myRank)%numProcs)*myRows, 0, 0, myRows, myRows, myCols, matrixSize);
         if (i != numProcs-1) {
             exchangeBlocks(bStorage, bSize, myRank, numProcs);
@@ -339,8 +341,9 @@ void exchangeBlocks(int* bStorage, int bSize, int myRank, int numProcs) {
     int i;
     
     tempStorage = (int*) malloc(bSize*sizeof(int));
-    sendTo   = (myRank+1) % numProcs;
-    recvFrom = (myRank+numProcs-1) % numProcs;
+    recvFrom   = (myRank+1) % numProcs;
+    sendTo = (myRank+numProcs-1) % numProcs;
+    //printf("mr: %d   snd: %d   rcv: %d\n", myRank, sendTo, recvFrom);
 
     if (myRank % 2 == 0) {
         MPI_Send(bStorage, bSize, MPI_INT, sendTo, DATA_MSG, MPI_COMM_WORLD);
