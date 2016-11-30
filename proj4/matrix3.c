@@ -1,8 +1,8 @@
 // Matrix Multiplication
 //******************************************************************************
-// life.cpp
+// matrix3.c
 //
-// Summary: Multiply matrices of the same size without blocking.
+// Summary: Multiply matrices of the same size in parallel with blocking.
 //
 // Authors: Spencer Pullins & Blake Lasky
 // Created: Nov 2016
@@ -25,13 +25,6 @@
 #define OPEN_FILE_ERROR -1
 #define MALLOC_ERROR    -2
 #define INVALID_MATRIX  -3
-
-
-#define MIN(a,b) 	         ((a) < (b) ? (a) : (b))
-#define BLOCK_LOW(id,p,n)    ((id)*(n)/(p))
-#define BLOCK_HIGH(id,p,n)   (BLOCK_LOW((id)+1,p,n) - 1)
-#define BLOCK_SIZE(id,p,n)   (BLOCK_LOW((id)+1,p,n) - BLOCK_LOW(id,p,n))
-#define BLOCK_OWN(index,p,n) (((p)*((index)+1)-1)/(n))
 
 
 // Reads a matrix from a file and sends the blocks to coreesponding processes
@@ -139,62 +132,38 @@ int main(int argc, char* argv[]) {
         MPI_Abort(MPI_COMM_WORLD, MALLOC_ERROR);
     }
 
+
     // Link up C matrix
     cMatrix[0] = cStorage;
     for (i = 1; i < myRows; ++i) {
         cMatrix[i] = cMatrix[i-1] + myCols;
     }
     
-    seqToPar = MPI_Wtime();
-    if(argv[2][0] == '3'){ 
-        for (r = 0; r < myRows; ++r) {
-            for (c = 0; c < myCols; ++c) {
-                cMatrix[r][c] = 0;//aMatrix[r][c];
-            }
-        }
-    
-        // BEGIN parallel operations
-        //printf("rnk: %d     rws: %d,    cols: %d\n", myRank, myRows, myCols);
-    
-        for (i = 0; i < numProcs; ++i) {
-        //printf("rnk: %d     arow: %d,    cols: %d\n", myRank, ((i+myRank)%numProcs)*myRows, i);
-            matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, ((i+myRank)%numProcs)*myRows, 0, 0, myRows, myRows, myCols, matrixSize);
-            if (i != numProcs-1) {
-                exchangeBlocks(bStorage, bSize, tempStorage, myRank, numProcs);
-            }
+    // Initialize cMatrix to 0's
+    for (r = 0; r < myRows; ++r) {
+        for (c = 0; c < myCols; ++c) {
+            cMatrix[r][c] = 0;
         }
     }
-    else if(argv[2][0] == '2'){
-        for (r = 0; r < myRows; ++r) {
-            for (c = 0; c < myCols; ++c) {
-                cMatrix[r][c] = 0;//aMatrix[r][c];
-            }
-        }
-    
-        // BEGIN parallel operations
-        seqToPar = MPI_Wtime();
-    
-        for (i = 0; i < numProcs; ++i) {
-            matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, ((i+myRank)%numProcs)*myRows, 0, 0, myRows, myRows, myCols, matrixSize);
-        }
 
-    }
-    else if(argv[2][0] == '1'){
-      for (r = 0; r < myRows; ++r) {
-          for (c = 0; c < myCols; ++c) {
-              sum = 0;
-              for (i = 0; i < matrixSize; ++i) {
-                  sum += aMatrix[r][i] * bMatrix[i][c];
-              }
-              cMatrix[r][c] = sum;
-          }
-      }
-    }
-    parToSeq = MPI_Wtime();
 
-    // Print matrix once before modifying it
+    // Multiply matrices
+    for (i = 0; i < numProcs; ++i) {
+        matrixMultiply(aMatrix, bMatrix, cMatrix, 0, 0, 0, 
+                        ((i+myRank)%numProcs)*myRows, 0, 0, myRows, myRows, 
+                        myCols, matrixSize);
+
+        // Don't exchange if I am not multiplying anymore
+        if (i != numProcs-1) {
+            exchangeBlocks(bStorage, bSize, tempStorage, myRank, numProcs);
+        }
+    }
+
+
+    // Print resulting matrix
     printRowStripedMatrix(cMatrix, matrixSize, myRank, numProcs);
-    
+
+
     // Free dynami memory
     free(aStorage);
     free(aMatrix);
@@ -204,6 +173,7 @@ int main(int argc, char* argv[]) {
     
     free(cStorage);
     free(cMatrix);
+
 
     // Print runtimes to stderr so stdout can be piped to /dev/null
     endTime = MPI_Wtime();
@@ -276,7 +246,7 @@ void readRowStripedMatrices(char* filename, int*** aMatrix, int** aStorage,
 
 
     // Exit if memory allocation failed
-    if (aStorage == NULL || aMatrix == NULL || bStorage == NULL || aMatrix == NULL) {
+    if (aStorage == NULL || aMatrix == NULL || bStorage == NULL || bMatrix == NULL) {
         MPI_Abort(MPI_COMM_WORLD, MALLOC_ERROR);
     }
 
@@ -362,8 +332,6 @@ void exchangeBlocks(int* bStorage, int bSize, int* tStorage, int myRank, int num
     for (i = 0; i < bSize; ++i) {
         bStorage[i] = tStorage[i];
     }
-
-    free (tempStorage);
 }
 
 
@@ -449,31 +417,17 @@ void printSubmatrix(long long **subMatrix, int numRows, int numCols) {
 }
 
 
+void matrixMultiply(int **a, int **b, long long **c, int crow, int ccol, 
+                    int arow, int acol, int brow, int bcol, 
+                    int L, int M, int N, int matSize) {
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void matrixMultiply(int **a, int **b, long long **c, int crow, int ccol, int arow, int acol, int brow, int bcol, int L, int M, int N, int matSize) {
-
-    int lhalf[3], mhalf[3], nhalf[3];
+    int lhalf[3], mhalf[3], nhalf[3]; // used for splitting matrix
     int i, j, k;
     int *aptr;
     int *bptr;
     long long sum;
 
+    // Make recursive call if matrices will not fit in cache
     if (M*N > THRESHOLD) {
         lhalf[0] = 0; lhalf[1] = L/2; lhalf[2] = L-L/2;
         mhalf[0] = 0; mhalf[1] = M/2; mhalf[2] = M-M/2;
@@ -491,6 +445,7 @@ void matrixMultiply(int **a, int **b, long long **c, int crow, int ccol, int aro
             }
         }
 
+    // Multiply if they will fit in the cache
     } else {
 
         for (i = 0; i < L; ++i) {
@@ -507,27 +462,3 @@ void matrixMultiply(int **a, int **b, long long **c, int crow, int ccol, int aro
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
