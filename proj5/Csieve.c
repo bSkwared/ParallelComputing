@@ -44,16 +44,23 @@ int main(int argc, char* argv[]){
     int mySize;         // Elements in marked
     int i;
     int j;
+    int numThreads;
 
 
     // Make sure user provided number of iterations
-    if (argc != 2) {
+    if (argc != 3) {
         printf("\nUsage: %s maxNum\n", argv[0]);
         return 1;
     }
 
     maxNum = atoi(argv[1]);
     if (maxNum <= 0) {
+        printf("\nError: max number must be a positive integer\n");
+        return 2;
+    }
+
+    numThreads = atoi(argv[2]);
+    if (numThreads <= 0) {
         printf("\nError: max number must be a positive integer\n");
         return 2;
     }
@@ -96,19 +103,14 @@ int main(int argc, char* argv[]){
         }
         prime = index*2 + 3;
     }
-    for (int k = 0; k < primeCounter; ++k) {
-        printf("PPPPSSSS: %d\n", foundPrimes[k]);
-    }
 
     // Mark primes in my range
-    //#pragma omp parallel for private(j, prime)
+    #pragma omp parallel for num_threads(numThreads) private(j, prime, firstMultiple)
     for (i = 0; i < primeCounter; ++i) {
         prime = foundPrimes[i];
-        printf("marking with prime: %d\n", prime);
         firstMultiple = prime*prime/2 -1;
         // Mark primes
         for(j = firstMultiple; j < maxNum; j += prime){
-            printf("mk'd: %d\n", j*2+3);
             marked[j] = 1;
         }
     }
@@ -123,7 +125,6 @@ int main(int argc, char* argv[]){
 printf("\n\n\n");
     for(i = 0; i < maxNum; i++){
         if(marked[i] == 0){
-            printf("prime at: %d\n", i*2+3);
             myPrimes++;
         }
     }
