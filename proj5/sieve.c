@@ -1,51 +1,33 @@
-//Sieve of Eratosthenes (Part C: Remove broadcast)
+//Sieve of Eratosthenes (Part T: Multithreaded)
 //******************************************************************************
-// Csieve.c
+// sieve.c
 //
 // Summary: Each process will find primes < sqrt(n) on their own
 //
 // Authors: Spencer Pullins & Blake Lasky
-// Created: 10/2/2016
+// Created: 12/2/2016
 //******************************************************************************
 
+#include <time.h>
+#include <sys/time.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <omp.h>
 
-#define MIN(a,b)             ((a) < (b) ? (a) : (b))
-#define BLOCK_LOW(id,p,n)    ((id)*(n)/(p))
-#define BLOCK_HIGH(id,p,n)   (BLOCK_LOW((id)+1,p,n) - 1)
-#define BLOCK_SIZE(id,p,n)   (BLOCK_LOW((id)+1,p,n) - BLOCK_LOW(id,p,n))
-#define BLOCK_OWN(index,p,n) (((p)*((index)+1)-1)/(n))
-
-#pragma parallelize
 int main(int argc, char* argv[]){
-    int myPrimes;       // Local  prime count
-    int totalPrimes;    // Global prime count
 
     double startTime;   // Seconds from epoch to the start of the loop
     double endTime;     // Seconds from epoch to the end of the combine
 
-    int myRank;         // Which number process I am [0, (n-1)]
-    int numProcs;       // How many processes there are going to be
-
-    int firstMultiple;  // Index of first multiple
-    int myMax;          // Highest value on this proc
-    int index;          // Index of current prime
-    int myMin;          // Lowest value on this proc
     char *marked;       // Portioin of 2,...,n
     char *myMarked;     // Portiona from 2,...,sqrt(n)
     int *foundPrimes;   // Primes found < sqrt(n)
-    int primeCounter;   // Number of primes < sqrt(n)
-    int sqrtMax;        // sqrt(maxNum)
-    int maxNum;         // Sieving from 2,...,n
-    int p0Size;         // Size of proc 0's subarray
-   // int prime;          // Current prime
-    int mySize;         // Elements in marked
-    int i;
     int j;
-    int numThreads;
+    
 
+    struct timeval tm;
+    gettimeofday(&tm, NULL);
 
     // Make sure user provided number of iterations
     if (argc != 3) {
@@ -53,30 +35,29 @@ int main(int argc, char* argv[]){
         return 1;
     }
 
-    maxNum = atoi(argv[1]);
+    int maxNum = atoi(argv[1]);
+    int sqrtMax = (int) sqrt(maxNum);
+    int originalMaxNum = maxNum;
     if (maxNum <= 0) {
         printf("\nError: max number must be a positive integer\n");
         return 2;
     }
 
-    numThreads = atoi(argv[2]);
+    int numThreads = atoi(argv[2]);
     if (numThreads <= 0) {
         printf("\nError: max number must be a positive integer\n");
         return 2;
     }
+    omp_set_num_threads(numThreads);
 
-    sqrtMax = (int) sqrt(maxNum);
     
     // Allocate this process's share of the array to zeros
-    if (maxNum%2 ==0){
-        maxNum /= 2;
-        --maxNum;
-    } else {
-        maxNum/=2;
-    }
+    --maxNum;
+    maxNum /= 2;
     marked   = (char *) calloc(maxNum,  sizeof(char));
     myMarked = (char *) calloc(sqrtMax, sizeof(char));
     foundPrimes = (int *) malloc((sqrtMax/2) * sizeof(int));
+
 
     // Exit if we couldn't allocate memory
     if(marked == NULL || myMarked == NULL || foundPrimes == NULL){
@@ -86,8 +67,8 @@ int main(int argc, char* argv[]){
 
 
     // Mark primes < sqrt(n)
-    index = 0;
-    primeCounter = 0;
+    int index = 0;
+    int primeCounter = 0;
     int prime = 3;
     while (prime <= sqrtMax) {
         foundPrimes[primeCounter] = prime;
@@ -104,9 +85,11 @@ int main(int argc, char* argv[]){
         prime = index*2 + 3;
     }
 
-    // Mark primes in my range
-    #pragma omp parallel for num_threads(numThreads) private(j, prime, firstMultiple)
-    for (i = 0; i < primeCounter; ++i) {
+
+    // Mark primes 
+    int firstMultiple;
+    #pragma omp parallel for private(j, prime, firstMultiple)
+    for (int i = 0; i < primeCounter; ++i) {
         prime = foundPrimes[i];
         firstMultiple = prime*prime/2 -1;
         // Mark primes
@@ -116,21 +99,26 @@ int main(int argc, char* argv[]){
     }
 
 
-    // Count local primes found, include 2 if proc 0
-    //if (myRank == 0) {
-        myPrimes = 1;
-    //} else {
-    //    myPrimes = 0;
-    //}
-printf("\n\n\n");
-    for(i = 0; i < maxNum; i++){
+    // Total primes from
+    int totalPrimes = 1;
+    for(int i = 0; i < maxNum; i++){
         if(marked[i] == 0){
-            myPrimes++;
+            totalPrimes++;
         }
     }
 
-    // Total primes from all the processes
-    printf("primes: %d\n", myPrimes);
+
+    // Get time at end
+    struct timeval end;
+    gettimeofday(&end, NULL);
+
+    // Runtime = end-start
+    double runTime = (double)(end.tv_sec) + ((double) (end.tv_usec))/1.0e6;
+    runTime -= (double)(tm.tv_sec) + ((double) (tm.tv_usec))/1.0e6;
+   
+    printf("Number of primes found: %d\n", totalPrimes);
+
+    fprintf(stderr, "%d,%d,%.15f\n", numThreads, originalMaxNum, runTime);
     
     free(foundPrimes);
     free(myMarked);
