@@ -1,0 +1,171 @@
+public class Quicksort implements Runnable {
+
+    private int high;
+    private int low;
+
+    private int[] arr;
+
+    public Quicksort(int[] array) {
+        this(array, 0, array.length-1);
+    }
+
+    public Quicksort(int[] array, int lo, int hi) {
+        low  = lo;
+        high = hi;
+
+        arr = array;
+    }
+
+    public void run() {
+        sort();
+    }
+
+    public void sort() {
+       sort(low, high); 
+    }
+
+    public void parallelSort() {
+
+        int mid = partition(low, high);
+
+        Thread[] threads = new Thread[3];
+        
+            System.out.println();
+        System.out.println("Mid low:");
+        for (int i = 0; i < mid; ++i) {
+            System.out.print(arr[i] + ", ");
+        }
+        System.out.println();
+
+        System.out.println("Mid hi:");
+        for (int i = mid; i < high; ++i) {
+            System.out.print(arr[i] + ", ");
+        }
+        System.out.println();
+            System.out.println();
+
+
+        int lo = 0;
+        if (low < mid-1) {
+            lo = partition(low, mid-1);
+
+            System.out.println();
+            System.out.println("lo low:");
+            for (int i = 0; i < lo; ++i) {
+                System.out.print(arr[i] + ", ");
+            }
+            System.out.println();
+
+            System.out.println("lo hi:");
+            for (int i = lo; i < mid; ++i) {
+                System.out.print(arr[i] + ", ");
+            }
+            System.out.println();
+            System.out.println();
+            
+            
+            threads[0] = new Thread(new Quicksort(arr, low, lo-1));
+            threads[1] = new Thread(new Quicksort(arr, lo, mid-1));
+            
+            //threads[0].start();
+            //threads[1].start();
+        }
+
+        int hi = 0;
+        if (mid < high) {
+            hi = partition(mid, high);
+            threads[2] = new Thread(new Quicksort(arr, mid, hi-1));
+            //threads[2].start();
+            //sort(hi, high);
+        }
+System.out.println("lo: " + lo);
+System.out.println("mid: " + mid);
+System.out.println("hi: " + hi);
+
+
+/*
+        for (Thread t : threads) {
+            t.start();
+        }*/
+
+        for (Thread t : threads) {
+            if (t != null) {
+                t.yield();
+            }
+        }
+        System.out.print("done aprt: " );
+        for (int k : arr) {
+            System.out.print(k + ", ");
+        }
+        System.out.println();
+    }
+
+    private void sort (int a, int b) {
+        if (a >= b) {
+            return;
+        }
+        
+        int left = partition(a, b);
+
+        sort(a, left-1);
+        sort(left, b);
+    }
+
+    private int partition(int a, int b) {
+        int left = a;
+        int right = b;
+
+        int middle = (left + right)/2;
+        int pivot = triMedian(arr[left], arr[middle], arr[b]); // get pivot
+
+        while (left <= right) {
+            while (left <= right && arr[left] < pivot) {
+                ++left;
+            }
+
+            while (left <= right && arr[right] > pivot) {
+                --right;
+            }
+
+            if (left <= right) {
+                int temp = arr[left];
+                arr[left] = arr[right];
+                arr[right] = temp;
+                ++left;
+                --right;
+            }
+        }
+
+        int temp = arr[left];
+        arr[left] = arr[b];
+        arr[b] = temp;
+
+        System.out.println("\nPartitioned from " + a + " to " + b);
+        for (int i = a; i <= b; ++i) {
+            System.out.print(arr[i] + ", ");
+        }
+        System.out.println();
+
+        return left;
+    }
+
+    private static int triMedian(int a, int b, int c) {
+        if (a > b) {
+            if (c > a) {
+                return a;
+            } else if (b > c) {
+                return b;
+            } else {
+                return c;
+            }
+        } else {
+            if (c > b) {
+                return b;
+            } else if (a > c) {
+                return a;
+            } else {
+                return c;
+            }
+        }
+    }
+}
