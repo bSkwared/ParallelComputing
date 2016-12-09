@@ -1,8 +1,8 @@
-
+import java.util.*;
 public class Quicksort {
 
-    private int hi;
-    private int lo;
+    private int high;
+    private int low;
 
     private int[] arr;
 
@@ -10,22 +10,15 @@ public class Quicksort {
         this(array, 0, array.length-1);
     }
 
-    public Quicksort(int[] array, int low, int high) {
-        hi = high;
-        lo = low;
+    public Quicksort(int[] array, int lo, int hi) {
+        low  = lo;
+        high = hi;
 
         arr = array;
     }
 
     public void sort() {
-       sort(lo, hi); 
-
-        for (int i : arr) {
-            System.out.print(i + " ");
-        }
-        System.out.println();
-        System.out.println();
-        System.out.println();
+       sort(low, high); 
     }
 
 
@@ -35,9 +28,10 @@ public class Quicksort {
         }
 
         int left = a;
-        int right = b - 1;
+        int right = b;
 
-        int pivot = arr[b]; // get pivot
+        int middle = (left + right)/2;
+        int pivot = triMedian(arr[left], arr[middle], arr[b]); // get pivot
 
         while (left <= right) {
             while (left <= right && arr[left] < pivot) {
@@ -63,12 +57,39 @@ public class Quicksort {
 
 
         sort(a, left-1);
-        sort(left+1, b);
+        sort(left, b);
+    }
+
+    private static int triMedian(int a, int b, int c) {
+        if (a > b) {
+            if (c > a) {
+                return a;
+            } else if (b > c) {
+                return b;
+            } else {
+                return c;
+            }
+        } else {
+            if (c > b) {
+                return b;
+            } else if (a > c) {
+                return a;
+            } else {
+                return c;
+            }
+        }
     }
 
     public static void main(String[] args) {
 
+
         int[] a = {5, 2, 8, 3, 6, 2, 5, 8, 3, 0};
+
+        final int TEST_SIZE = 5;
+        final int MAX = 10;
+        
+        final int BIG_TEST = 100000000;
+        final int MAX_BIG = 1000000;
 
         Quicksort q = new Quicksort(a);
         
@@ -83,5 +104,58 @@ public class Quicksort {
             System.out.print(i + " ");
         }
         System.out.println();
+
+        System.out.println("NEXT TEST ---------\n");
+
+        Random rand = new Random();
+        int[] b = new int[TEST_SIZE];
+        for (int i = 0; i < TEST_SIZE; ++i) {
+            int r = rand.nextInt();
+            r = ((r%10)+10)%10;
+            b[i] = r;
+        }
+
+        q = new Quicksort(b);
+
+        for (int i : b) {
+            System.out.print(i + " ");
+        }
+        System.out.println();
+
+        q.sort();
+        
+        for (int i : b) {
+            System.out.print(i + " ");
+        }
+        System.out.println();
+        System.out.println();
+
+
+
+
+        System.out.println("\n\nBIGGER TEST ---------\n");
+
+        int[] c = new int[BIG_TEST];
+        for (int i = 0; i < BIG_TEST; ++i) {
+            int r = rand.nextInt();
+            r = ((r%MAX_BIG)+MAX_BIG)%MAX_BIG;
+            c[i] = r;
+        }
+
+        q = new Quicksort(c);
+
+        q.sort();
+        
+        int last = 0;
+        boolean foundError = false;
+
+        for (int i : c) {
+            if (i < last) foundError = true;
+            last = i;
+        }
+
+        System.out.println((foundError)?"Error: numbers out of order\n\n":"Success: numbers sorted!!!\n\n(how)\n\n");
+
+
     }
 }
