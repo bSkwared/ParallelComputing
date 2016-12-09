@@ -31,6 +31,7 @@ public class Quicksort implements Runnable {
         Thread[] threads = new Thread[3];
         
             System.out.println();
+            System.out.println("midval: " + arr[mid]);
         System.out.println("Mid low:");
         for (int i = 0; i < mid; ++i) {
             System.out.print(arr[i] + ", ");
