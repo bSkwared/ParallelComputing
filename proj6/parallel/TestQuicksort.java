@@ -1,4 +1,5 @@
 import java.util.Random;
+import java.util.HashMap;
 
 class TestQuicksort {
 
@@ -58,11 +59,18 @@ class TestQuicksort {
 
         System.out.println("\n\nBIGGER TEST ---------\n");
 
+        HashMap<Integer, Integer> numbersBefore = new HashMap<>();
+
         int[] c = new int[BIG_TEST];
         for (int i = 0; i < BIG_TEST; ++i) {
             int r = rand.nextInt();
             r = ((r%MAX_BIG)+MAX_BIG)%MAX_BIG;
             c[i] = r;
+            if (numbersBefore.containsKey(r)) {
+                numbersBefore.put(r, numbersBefore.get(r));
+            } else {
+                numbersBefore.put(r, 1);
+            }
         }
 
         q = new Quicksort(c);
@@ -72,9 +80,18 @@ class TestQuicksort {
         int last = 0;
         boolean foundError = false;
 
+        HashMap<Integer, Integer> numbersAfter = new HashMap<>();
         for (int i : c) {
             if (i < last) foundError = true;
             last = i;
+            if (numbersAfter.containsKey(i)) {
+                numbersAfter.put(i, numbersAfter.get(i));
+            } else {
+                numbersAfter.put(i, 1);
+            }
+        }
+        if (!numbersBefore.equals(numbersAfter)) {
+            foundError = true;
         }
 
         System.out.println((foundError)?"Error: numbers out of order\n\n":"Success: numbers sorted!!!\n\n(how)\n\n");

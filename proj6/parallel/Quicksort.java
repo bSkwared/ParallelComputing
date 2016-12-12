@@ -1,4 +1,4 @@
-public class Quicksort implements Runnable {
+public class Quicksort {
 
     private int high;
     private int low;
@@ -16,10 +16,6 @@ public class Quicksort implements Runnable {
         arr = array;
     }
 
-    public void run() {
-        sort();
-    }
-
     public void sort() {
        sort(low, high); 
     }
@@ -28,32 +24,39 @@ public class Quicksort implements Runnable {
 
         Thread[] threads = new Thread[3];
 
+        
+        // Sort bottom half
         int mid = partition(low, high);
         if (low < mid-1) {
             int lo = partition(low, mid-1);
 
-            threads[0] = new Thread(new Quicksort(arr, low, lo-1));
+            threads[0] = new Thread(new QuicksortThread(arr, low, lo-1));
             threads[0].start();
 
-            threads[1] = new Thread(new Quicksort(arr, lo+1, mid-1));
+            threads[1] = new Thread(new QuicksortThread(arr, lo+1, mid-1));
             threads[1].start();
         }
 
+
+        // Sort top half
         if (mid < high) {
             int hi = partition(mid, high);
 
-            threads[2] = new Thread(new Quicksort(arr, mid+1, hi-1));
+            threads[2] = new Thread(new QuicksortThread(arr, mid+1, hi-1));
             threads[2].start();
 
             sort(hi+1, high);
         }
 
+
+        // Wait for all threads to finish
         for (Thread t : threads) {
             try {
                 t.join();
             } catch (Exception e) { }   
         }
     }
+
 
     private void sort (int a, int b) {
         if (a >= b) {
@@ -68,30 +71,11 @@ public class Quicksort implements Runnable {
 
     private int partition(int a, int b) {
         int left = a;
-        int right = b;
+        int right = b-1;
 
-        int middle = (left + right)/2;
+        setMedian(a, b);
 
-        if (arr[left] > arr[middle]) {
-            int t = arr[left];
-            arr[left] = arr[middle];
-            arr[middle] = t;
-        }
-
-        if (arr[right] > arr[middle]) {
-            int t = arr[right];
-            arr[right] = arr[middle];
-            arr[middle] = t;
-        }
-
-        if (arr[left] > arr[right]) {
-            int t = arr[left];
-            arr[left] = arr[right];
-            arr[right] = t;
-        }
-
-
-        int pivot = arr[right--]; // get pivot
+        int pivot = arr[b]; // get pivot
 
         while (left <= right) {
             while (left <= right && arr[left] < pivot) {
@@ -118,23 +102,26 @@ public class Quicksort implements Runnable {
         return left;
     }
 
-    private static int triMedian(int a, int b, int c) {
-        if (a > b) {
-            if (c > a) {
-                return a;
-            } else if (b > c) {
-                return b;
-            } else {
-                return c;
-            }
-        } else {
-            if (c > b) {
-                return b;
-            } else if (a > c) {
-                return a;
-            } else {
-                return c;
-            }
+    private void setMedian(int a, int b) {
+
+        int middle = (a + b)/2;
+
+        if (arr[a] > arr[middle]) {
+            int t = arr[a];
+            arr[a] = arr[middle];
+            arr[middle] = t;
+        }
+
+        if (arr[b] > arr[middle]) {
+            int t = arr[b];
+            arr[b] = arr[middle];
+            arr[middle] = t;
+        }
+
+        if (arr[a] > arr[b]) {
+            int t = arr[a];
+            arr[a] = arr[b];
+            arr[b] = t;
         }
     }
 }
