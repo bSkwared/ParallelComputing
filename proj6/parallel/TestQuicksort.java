@@ -30,7 +30,7 @@ class TestQuicksort {
         System.out.println("NEXT TEST ---------\n");
 
         Random rand = new Random();
-        int[] b = new int[TEST_SIZE];
+  /*      int[] b = new int[TEST_SIZE];
         for (int i = 0; i < TEST_SIZE; ++i) {
             int r = rand.nextInt();
             r = ((r%10)+10)%10;
@@ -51,10 +51,10 @@ class TestQuicksort {
             System.out.print(i + " ");
         }
         System.out.println();
-        System.out.println();
+*/        System.out.println();
 
 
-/*
+
 
         System.out.println("\n\nBIGGER TEST ---------\n");
 
@@ -78,6 +78,6 @@ class TestQuicksort {
         }
 
         System.out.println((foundError)?"Error: numbers out of order\n\n":"Success: numbers sorted!!!\n\n(how)\n\n");
-*/
+
     }
 }

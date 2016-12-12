@@ -26,32 +26,66 @@ public class Quicksort implements Runnable {
 
     public void parallelSort() {
 
-        Thread[] threads = new Thread[3];
-
         int mid = partition(low, high);
+
+        Thread[] threads = new Thread[3];
+        
+            System.out.println();
+            System.out.println("midval: " + arr[mid]);
+        System.out.println("Mid low:");
+        for (int i = 0; i < mid; ++i) {
+            System.out.print(arr[i] + ", ");
+        }
+        System.out.println();
+
+        System.out.println("Mid hi:");
+        for (int i = mid; i < high; ++i) {
+            System.out.print(arr[i] + ", ");
+        }
+        System.out.println();
+            System.out.println();
+
+
+        int lo = 0;
         if (low < mid-1) {
-            int lo = partition(low, mid-1);
+            lo = partition(low, mid-1);
 
+            System.out.println();
+            System.out.println("lo low:");
+            for (int i = 0; i < lo; ++i) {
+                System.out.print(arr[i] + ", ");
+            }
+            System.out.println();
+
+            System.out.println("lo hi:");
+            for (int i = lo; i < mid; ++i) {
+                System.out.print(arr[i] + ", ");
+            }
+            System.out.println();
+            System.out.println();
+            
+            
             threads[0] = new Thread(new Quicksort(arr, low, lo-1));
+            threads[1] = new Thread(new Quicksort(arr, lo, mid-1));
+            
             threads[0].start();
-
-            threads[1] = new Thread(new Quicksort(arr, lo+1, mid-1));
             threads[1].start();
         }
 
+        int hi = 0;
         if (mid < high) {
-            int hi = partition(mid, high);
-
-            threads[2] = new Thread(new Quicksort(arr, mid+1, hi-1));
+            hi = partition(mid, high);
+            threads[2] = new Thread(new Quicksort(arr, mid, hi-1));
             threads[2].start();
-
-            sort(hi+1, high);
+            sort(hi, high);
         }
 
         for (Thread t : threads) {
-            try {
-                t.join();
-            } catch (Exception e) { }   
+            if (t != null) {
+                try {
+                    t.yield();
+                } catch (Exception e) {}
+            }
         }
     }
 
@@ -71,27 +105,7 @@ public class Quicksort implements Runnable {
         int right = b;
 
         int middle = (left + right)/2;
-
-        if (arr[left] > arr[middle]) {
-            int t = arr[left];
-            arr[left] = arr[middle];
-            arr[middle] = t;
-        }
-
-        if (arr[right] > arr[middle]) {
-            int t = arr[right];
-            arr[right] = arr[middle];
-            arr[middle] = t;
-        }
-
-        if (arr[left] > arr[right]) {
-            int t = arr[left];
-            arr[left] = arr[right];
-            arr[right] = t;
-        }
-
-
-        int pivot = arr[right--]; // get pivot
+        int pivot = triMedian(arr[left], arr[middle], arr[b]); // get pivot
 
         while (left <= right) {
             while (left <= right && arr[left] < pivot) {
@@ -114,6 +128,7 @@ public class Quicksort implements Runnable {
         int temp = arr[left];
         arr[left] = arr[b];
         arr[b] = temp;
+
 
         return left;
     }
